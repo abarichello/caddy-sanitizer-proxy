@@ -1,0 +1,5 @@
+localhost
+
+route {
+	xss-filter
+}
