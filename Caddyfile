@@ -1,5 +1,8 @@
 localhost
 
-route {
-	xss-filter
+route /escreverMensagem.jsf {
+	xss-filter {
+		behavior "filter"
+		forms "formulario:titulo" "formulario:mensagem"
+	}
 }

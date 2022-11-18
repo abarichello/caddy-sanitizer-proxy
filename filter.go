@@ -6,45 +6,46 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"go.uber.org/zap"
 )
 
 func init() {
-	caddy.RegisterModule(Filter{})
-	httpcaddyfile.RegisterHandlerDirective("xss-filter", parseCaddyfile)
+	caddy.RegisterModule(XSSFilter{})
 }
 
-func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	t := new(Filter)
-	return t, nil
-}
+// This XSSFilter module is responsible to filtering messages sent to a website through a reverse-proxy
+type XSSFilter struct {
+	Behavior string
+	Forms    []string
 
-// This Filter module is responsible to filtering messages sent to a website through a reverse-proxy
-type Filter struct {
 	logger *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
-func (filter Filter) CaddyModule() caddy.ModuleInfo {
+func (filter XSSFilter) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.filter",
-		New: func() caddy.Module { return new(Filter) },
+		New: func() caddy.Module { return new(XSSFilter) },
 	}
 }
 
-func (filter *Filter) Provision(ctx caddy.Context) error {
+func (filter *XSSFilter) Provision(ctx caddy.Context) error {
 	filter.logger = ctx.Logger()
 	return nil
 }
 
 // Main entrypoint for a request
-func (filter *Filter) ServeHTTP(w http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
-	filter.logger.Info("URL: " + req.URL.String())
+func (filter *XSSFilter) ServeHTTP(w http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
+	filter.logger.Info("XSS Filter")
+	requestPath := req.URL.Path
+	filter.logger.Info("Filtering path: " + requestPath)
+	filter.logger.Info("Behavior: " + filter.Behavior)
+	filter.logger.Info("Forms to filter: \"" + strings.Join(filter.Forms, ", ") + "\"")
 
 	// Copy original body before parsing multipart form
 	buf, _ := io.ReadAll(req.Body)
@@ -55,13 +56,12 @@ func (filter *Filter) ServeHTTP(w http.ResponseWriter, req *http.Request, next c
 	req.Body = multipartReadCloser
 
 	req.ParseMultipartForm(0)
-	if req.Form.Has(FORM_TITLE) {
-		filter.logger.Info("Título: \n" + req.FormValue(FORM_TITLE))
-	}
+	// if req.Form.Has(FORM_TITLE) {
+	// 	filter.logger.Info("Título: " + req.FormValue(FORM_TITLE))
+	// }
 
 	client := http.Client{Timeout: time.Minute}
-	cagrForum := "forum.cagr.ufsc.br"
-	cagrURL, err := url.Parse("http://" + cagrForum + "/escreverMensagem.jsf?topicoId=2600424")
+	cagrURL, err := url.Parse("http://" + FORUM_CAGR_HOST + requestPath)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (filter *Filter) ServeHTTP(w http.ResponseWriter, req *http.Request, next c
 		Header:        req.Header,
 		Body:          originalReadCloser,
 		ContentLength: req.ContentLength,
-		Host:          cagrForum,
+		Host:          FORUM_CAGR_HOST,
 		Form:          req.Form,
 		PostForm:      req.PostForm,
 		MultipartForm: req.MultipartForm,
@@ -91,6 +91,6 @@ func (filter *Filter) ServeHTTP(w http.ResponseWriter, req *http.Request, next c
 
 // Interface guards: https://caddyserver.com/docs/extending-caddy#interface-guards
 var (
-	_ caddy.Provisioner           = (*Filter)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Filter)(nil)
+	_ caddy.Provisioner           = (*XSSFilter)(nil)
+	_ caddyhttp.MiddlewareHandler = (*XSSFilter)(nil)
 )

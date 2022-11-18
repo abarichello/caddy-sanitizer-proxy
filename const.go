@@ -1,5 +1,5 @@
 package filter
 
 var (
-	FORM_TITLE = "formulario:titulo"
+	FORUM_CAGR_HOST = "forum.cagr.ufsc.br/"
 )
