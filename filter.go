@@ -15,10 +15,11 @@ import (
 )
 
 func init() {
+	initSanitizer()
 	caddy.RegisterModule(XSSFilter{})
 }
 
-// This XSSFilter module is responsible to filtering messages sent to a website through a reverse-proxy
+// O módulo XSSFilter é responsável por filtrar dados enviados a um site através de um reverse-proxy
 type XSSFilter struct {
 	Behavior string
 	Forms    []string
@@ -26,7 +27,7 @@ type XSSFilter struct {
 	logger *zap.Logger
 }
 
-// CaddyModule returns the Caddy module information.
+// CaddyModule retorna informação do módulo Caddy.
 func (filter XSSFilter) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.filter",
@@ -39,7 +40,7 @@ func (filter *XSSFilter) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Main entrypoint for a request
+// Função responsável pela manipulação da requisição recebida
 func (filter *XSSFilter) ServeHTTP(w http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
 	filter.logger.Info("XSS Filter")
 	requestPath := req.URL.Path
@@ -47,18 +48,21 @@ func (filter *XSSFilter) ServeHTTP(w http.ResponseWriter, req *http.Request, nex
 	filter.logger.Info("Behavior: " + filter.Behavior)
 	filter.logger.Info("Forms to filter: \"" + strings.Join(filter.Forms, ", ") + "\"")
 
-	// Copy original body before parsing multipart form
+	// Cópia do buffer a ser utilizado antes do parse feito pela função ParseMultipartForm
 	buf, _ := io.ReadAll(req.Body)
-	// Buffer to be used in the request forwarding
+	// Buffer a ser usado no redirecionamento da requisição
 	originalReadCloser := io.NopCloser(bytes.NewBuffer(buf))
-	// Buffer to be consumed by the ParseMultipartForm function
+	// Buffer que será consumido pela função ParseMultipartForm
 	multipartReadCloser := io.NopCloser(bytes.NewBuffer(buf))
 	req.Body = multipartReadCloser
 
 	req.ParseMultipartForm(0)
-	// if req.Form.Has(FORM_TITLE) {
-	// 	filter.logger.Info("Título: " + req.FormValue(FORM_TITLE))
-	// }
+
+	for _, formName := range filter.Forms {
+		if req.Form.Has(formName) {
+			filter.logger.Info("Filtering form with value: " + req.FormValue(formName))
+		}
+	}
 
 	client := http.Client{Timeout: time.Minute}
 	cagrURL, err := url.Parse("http://" + FORUM_CAGR_HOST + requestPath)

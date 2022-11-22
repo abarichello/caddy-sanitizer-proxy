@@ -10,7 +10,9 @@ func init() {
 	httpcaddyfile.RegisterHandlerDirective("xss-filter", parseCaddyfile)
 }
 
-// parseCaddyfile parses the 'xss-filter' directive.
+// parseCaddyfile fará o parsing da diretiva 'xss-filter' que é criada por este módulo.
+// Diretivas padrões do servidor Caddy também podem ser utilizadas em conjunto com este módulo
+// https://caddyserver.com/docs/caddyfile/directives
 //
 //	XSSFilter {
 //	    behavior <"filter" or "discard">
