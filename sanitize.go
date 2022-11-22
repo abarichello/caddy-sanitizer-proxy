@@ -22,11 +22,12 @@ func initSanitizer() {
 	// policy = bluemonday.NewPolicy()
 	// policy.AllowTables()
 	// policy.AllowImages()
+	// policy.AllowStandardURLs()
 	// ...
 }
 
 func SanitizeXSS(input string) (bool, string) {
 	sanitized := policy.Sanitize(input)
-	filtered := sanitized != input
-	return filtered, sanitized
+	modified := sanitized != input
+	return modified, sanitized
 }

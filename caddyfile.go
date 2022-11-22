@@ -32,7 +32,7 @@ func parseCaddyfileWithDispenser(h *caddyfile.Dispenser) (*XSSFilter, error) {
 			if !h.AllArgs(&b.Behavior) {
 				return nil, h.ArgErr()
 			}
-			if b.Behavior == "filter" || b.Behavior == "discard" {
+			if b.Behavior == BEHAVIOR_FILTER || b.Behavior == BEHAVIOR_DISCARD {
 				continue
 			} else {
 				return nil, h.ArgErr()
