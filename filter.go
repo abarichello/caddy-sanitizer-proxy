@@ -60,10 +60,19 @@ func (filter *XSSFilter) ServeHTTP(w http.ResponseWriter, req *http.Request, nex
 
 	for _, formName := range filter.Forms {
 		if req.Form.Has(formName) {
-			filter.logger.Info("Filtering form with value: " + req.FormValue(formName))
+			formValue := req.FormValue(formName)
+			filter.logger.Info("Filtering form with value: " + formValue)
+
+			modified, sanitized := SanitizeXSS(formValue)
+			if filter.Behavior == BEHAVIOR_FILTER {
+				req.Form.Set(formName, sanitized)
+			} else if filter.Behavior == BEHAVIOR_DISCARD && modified {
+				return ErrXSSDetected
+			}
 		}
 	}
 
+	// Redirecionamento da requisição para o CAGR
 	client := http.Client{Timeout: time.Minute}
 	cagrURL, err := url.Parse("http://" + FORUM_CAGR_HOST + requestPath)
 	if err != nil {
